@@ -21,8 +21,8 @@ $$
 ##### ConvGRU:
 
 $$
-R_t = Sigmoid(Conv(X_t, W_{xr}) + Conv(H_{t-1}, W_{hr})+b_r) \\
-Z_t = Sigmoid(Conv(X_t, W_{xz}) + Conv(H_{t-1}, W_{hz})+b_z) \\
+R_{t} = Sigmoid(Conv(X_t, W_{xr}) + Conv(H_{t-1}, W_{hr})+b_r) \\
+Z_{t} = Sigmoid(Conv(X_t, W_{xz}) + Conv(H_{t-1}, W_{hz})+b_z) \\
 \tilde{H}_t = Tanh(Conv(X_t, W_{x \tilde{h}})+Conv(R_t \odot H_{t-1}, W_{r \tilde{h}}) + b_{\tilde{h}}) \\
 H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H} \\
 Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p})
