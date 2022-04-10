@@ -1,4 +1,3 @@
-from mimetypes import init
 import numpy as np
 import torch 
 from torch import nn
@@ -112,7 +111,7 @@ class Animator:
 def seq_data_iter_random(pictures, batch_size, num_steps):
     """使用随机抽样生成一个小批量子序列"""
     # 从随机偏移量开始对序列进行分区，随即范围包括num_stpes-1
-    pictures = pictures[random.randint(0, num_steps - 1)]
+    pictures = pictures[random.randint(0, num_steps - 1):]
     # 由于要考虑标签，序列长度减一
     num_subseqs = (len(pictures) - 1) // num_steps
     # 长度为num_steps的子序列的起始索引
@@ -130,8 +129,23 @@ def seq_data_iter_random(pictures, batch_size, num_steps):
         # initial_indices 包含子序列的随机起始索引
         initial_indices_per_batch = initial_indices[i: i + batch_size]
         X = [data(j) for j in initial_indices_per_batch]
-        Y = [data(j + 1) for j in initial_indices_per_batch]
-        yield torch.tensor(np.array(X)), torch.tensor(np.array(Y))
+        Y = [pictures[j + num_steps][0, :, :] for j in initial_indices_per_batch]
+        yield torch.tensor(np.array(X), dtype=torch.float), torch.tensor(np.array(Y), dtype=torch.float)
+
+class SeqDataLoader:
+    """An iterator to load sequence data"""
+    def __init__(self, pictures, batch_size, num_steps, use_random_iter=True):
+        self.pictures = pictures
+        self.batch_size = batch_size
+        self.num_steps = num_steps
+
+        if use_random_iter:
+            self.data_iter = seq_data_iter_random
+        else:
+            raise NotImplementedError()
+        
+    def __iter__(self):
+        return self.data_iter(self.pictures, self.batch_size, self.num_steps)
 
 def predict(net, data, device):
     raise NotImplementedError()
@@ -152,10 +166,10 @@ def train_epoch(net, train_iter, loss, updater, device, use_random_iter=True):
     metric = Accumulator(2) # sum of train loss
     for X, Y in train_iter:
         if state is None or use_random_iter:
-            state = None
+           state = None
         else:
-            # state.detach_()
             raise NotImplementedError()
+            state.detach_()
         X, y = X.to(device), Y.to(device)
         y_hat, state = net(X, state)
         l = loss(y_hat, y)
@@ -163,7 +177,7 @@ def train_epoch(net, train_iter, loss, updater, device, use_random_iter=True):
         l.backward()
         grad_clipping(net, 1)
         updater.step()
-        metric.add(l * y.shape[0] * y.shape[1], y.shape[0] * y.shape[1])
+        metric.add(l * X.shape[0] * X.shape[1], X.shape[0] * X.shape[1])
     return metric[0] / metric[1], metric[1] / timer.stop()
 
 def train(net, train_iter, lr, num_epochs, device, use_random_iter=True):
@@ -177,7 +191,7 @@ def train(net, train_iter, lr, num_epochs, device, use_random_iter=True):
         MSE, speed = train_epoch(net, train_iter, loss, updater, device, use_random_iter)
         if (epoch + 1) % 10 == 0:
             animator.add(epoch + 1, [MSE])
-    print(f'MSE {MSE:.2f}, {speed:.1f} pictures/sec on {str(device)}')
+    print(f'MSE: {MSE:.2f}, {speed:.1f} pictures/sec. on {str(device)}')
 
 def evaluate(net, data_iter, device):
     net.eval()
@@ -190,5 +204,5 @@ def evaluate(net, data_iter, device):
             y = y.to(device)
             y_hat, _ = net(X)
             l = loss(y, y_hat)
-            metric.add(l * y.shape[0] * y.shape[1], y.shape[0] * y.shape[1])
+            metric.add(l * X.shape[0] * X.shape[1], X.shape[0] * X.shape[1])
     return metric[0] / metric[1]

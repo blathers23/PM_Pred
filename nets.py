@@ -1,6 +1,9 @@
 import torch 
 import torch.nn as nn 
 
+# ----------------------------------------------------------- #
+# ConvGRU
+
 class ConvGRUCell(nn.Module):
     r"""
     初始化 ConvGRU cell
@@ -125,6 +128,8 @@ class ConvGRU(nn.Module):
         self.dec = nn.Conv2d(in_channels=self.hidden_dim[-1]+1,
                             out_channels=1, kernel_size=self.dec_kernel_size, 
                             padding=self.padding, bias=self.bias)
+
+        self.relu = nn.ReLU()
     
     def forward(self, input_tensor, hidden_state=None):
         r"""
@@ -154,6 +159,8 @@ class ConvGRU(nn.Module):
         seq_len = input_tensor.size(1)
         cur_layer_input = input_tensor
 
+        # last_state_list = []
+
         for layer_idx in range(self.num_layers):
 
             h = hidden_state[layer_idx]
@@ -163,12 +170,13 @@ class ConvGRU(nn.Module):
                                                     cur_state=h)
                 output_inner.append(h)
             
+            # last_state_list.append(h)
             layer_output = torch.stack(output_inner, dim=1)
             cur_layer_input = layer_output
 
-        pred = self.dec(torch.cat([input_tensor[:, -1, 0, :, :].unsqueeze(dim=1), layer_output[:, -1, :, :, :]], dim=1))
+        pred = self.relu(self.dec(torch.cat([input_tensor[:, -1, 0, :, :].unsqueeze(dim=1), layer_output[:, -1, :, :, :]], dim=1)))
 
-        return pred[:, 0, :, :]
+        return pred[:, 0, :, :], None
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []
@@ -187,6 +195,9 @@ class ConvGRU(nn.Module):
         if not isinstance(param, list):
             param = [param] * num_layers
         return param
+
+# ----------------------------------------------------------- #
+# ConvLSTM
 
 class ConvLSTMCell(nn.Module):
     r"""
@@ -308,6 +319,8 @@ class ConvLSTM(nn.Module):
         self.dec = nn.Conv2d(in_channels=self.hidden_dim[-1]+1,
                             out_channels=1, kernel_size=self.dec_kernel_size, 
                             padding=self.padding, bias=self.bias)
+
+        self.relu = nn.ReLU()
     
     def forward(self, input_tensor, hidden_state=None):
         r"""
@@ -349,7 +362,7 @@ class ConvLSTM(nn.Module):
             layer_output = torch.stack(output_inner, dim=1)
             cur_layer_input = layer_output
 
-        pred = self.dec(torch.cat([input_tensor[:, -1, 0, :, :].unsqueeze(dim=1), layer_output[:, -1, :, :, :]], dim=1))
+        pred = self.relu(self.dec(torch.cat([input_tensor[:, -1, 0, :, :].unsqueeze(dim=1), layer_output[:, -1, :, :, :]], dim=1)))
 
         return pred[:, 0, :, :]
 
