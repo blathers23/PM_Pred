@@ -8,8 +8,11 @@
 
 ##### ConvLSTM：
 
+<<<<<<< HEAD
 > 与 ConvLSTM 论文中的实现方式不同，以《动手学深度学习》中的描述为准
 
+=======
+>>>>>>> 8afcf6c135faba1ffd5bccb423f1189877b56cbd
 $$
 I_{t} = Sigmoid(Conv(X_t, W_{xi}) + Conv(H_{t-1}, W_{hi}) + b_i) \\
 F_{t} = Sigmoid(Conv(X_t, W_{xf}) + Conv(H_{t-1}, W_{hf}) + b_f) \\
