@@ -254,13 +254,13 @@ class ConvLSTMCell(nn.Module):
         combined = torch.cat([input_tensor, h_cur], dim=1)  #concat alone channel axis
         
         combined_conv = self.conv(combined)
-        cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1)
+        cc_i, cc_f, cc_o, cc_c = torch.split(combined_conv, self.hidden_dim, dim=1)
         i = torch.sigmoid(cc_i)
         f = torch.sigmoid(cc_f)
         o = torch.sigmoid(cc_o)
-        g = torch.tanh(cc_g)
+        c_next_ = torch.tanh(cc_c)
 
-        c_next = f * c_cur + i * g
+        c_next = f * c_cur + i * c_next_
         h_next = o * torch.tanh(c_next)
 
         return h_next, c_next
