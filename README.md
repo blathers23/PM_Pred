@@ -28,8 +28,6 @@ H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H} \\
 Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
 $$
 
-
-
 #### 进度：
 
 ##### update 4/10:
