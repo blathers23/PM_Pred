@@ -40,10 +40,11 @@ class ConvGRUCell(nn.Module):
                                 bias=self.bias)
 
     def forward(self, input_tensor, cur_state):
+
         h_cur = cur_state
 
         combined1 = torch.cat([input_tensor, h_cur], dim=1)  #concat alone channel axis
-        
+
         combined_conv = self.conv1(combined1)
         cc_r, cc_z = torch.split(combined_conv, self.hidden_dim, dim=1)
         r = torch.sigmoid(cc_r)
@@ -68,7 +69,7 @@ class ConvGRU(nn.Module):
         输入channel
     hidden_dim: int or list
         隐状态channel
-    kernel_size: int
+    kernel_size: int or list
         卷积核size
     num_layers: int
         LSTM层的数量
@@ -91,7 +92,7 @@ class ConvGRU(nn.Module):
 
         >> convgru = ConvGRU(64, 16, 3, 3, 3, True, True) 
 
-        >> pred = convgru(x) 
+        >> pred, state = convgru(x) 
     """ 
     def __init__(self, input_dim, hidden_dim, kernel_size, dec_kernel_size, num_layers,
                 batch_first=False, bias=True):
@@ -138,11 +139,14 @@ class ConvGRU(nn.Module):
         input_tensor: 
             5-D tensor (t, b, c, h, w) or (b, t, c, h, w)
         hidden_state:
-            None
+            None or list of h
         
         Returns:
         ----------
-        last_state_list, layer_out
+        Pred:
+            3-D tensor (b, h, w)
+        hidden_state:
+            None or list of h
         """
         if not self.batch_first:
             # (t, b, c, h, w) -> (b, t, c, h, w)
@@ -152,14 +156,15 @@ class ConvGRU(nn.Module):
 
         #Implement stateful ConvGRU
         if hidden_state is not None:
-            raise NotImplementedError()
+            use_random_iter = False
         else:
+            use_random_iter = True
             hidden_state = self._init_hidden(batch_size=b, image_size=(h, w))
 
         seq_len = input_tensor.size(1)
         cur_layer_input = input_tensor
 
-        # last_state_list = []
+        state_list = []
 
         for layer_idx in range(self.num_layers):
 
@@ -170,13 +175,17 @@ class ConvGRU(nn.Module):
                                                     cur_state=h)
                 output_inner.append(h)
             
-            # last_state_list.append(h)
+            if not use_random_iter:
+                state_list.append(h)
             layer_output = torch.stack(output_inner, dim=1)
             cur_layer_input = layer_output
 
         pred = self.relu(self.dec(torch.cat([input_tensor[:, -1, 0, :, :].unsqueeze(dim=1), layer_output[:, -1, :, :, :]], dim=1)))
 
-        return pred[:, 0, :, :], None
+        if len(state_list) == 0:
+            return pred[:, 0, :, :], None
+        else:
+            return pred[:, 0, :, :], state_list
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []
@@ -188,13 +197,22 @@ class ConvGRU(nn.Module):
     def _check_kernel_size_consistency(kernel_size):
         if not (isinstance(kernel_size, tuple) or isinstance(kernel_size, int) or (isinstance(kernel_size, list)
             and all([isinstance(elem, tuple) for elem in kernel_size]))):
-            raise ValueError('kernel_size must be int or tuple or list of tuples')
+            raise ValueError('kernel_size must be int or tuple or list of tuples.')
     
     @staticmethod
     def _extend_for_multilayer(param, num_layers):
         if not isinstance(param, list):
             param = [param] * num_layers
         return param
+
+    def summary(self, PATH):
+        with open(PATH + "\\log.txt","a") as f:
+            f.write("\n--------MODEL_INFO--------\n")
+            f.write("model: \t\t\t\tConvGRU\n")
+            f.write("hidden_dim: \t\t"+str(self.hidden_dim)+"\n")
+            f.write("kernel_size: \t\t"+str(self.kernel_size)+"\n")
+            f.write("dec_kernel_size: \t"+str(self.dec_kernel_size)+"\n")
+            f.write("num_layers: \t\t"+str(self.num_layers)+"\n")
 
 # ----------------------------------------------------------- #
 # ConvLSTM
@@ -258,10 +276,12 @@ class ConvLSTM(nn.Module):
     -------------
     input_dim: int
         输入channel
-    hidden_dim: int
+    hidden_dim: int or list
         隐状态channel
-    kernel_size: int
+    kernel_size: int or list
         卷积核size
+    dec_kernel_size: int
+        解码器卷积核size
     num_layers: int
         LSTM层的数量
     batch_first: bool
@@ -281,9 +301,9 @@ class ConvLSTM(nn.Module):
     -------------
         >> x = torch.rand((32, 10, 64, 128, 128)) 
 
-        >> convlstm = ConvLSTM(64, 16, 3, 3, 1, True, True, True) 
+        >> convlstm = ConvLSTM(64, 16, 3, 3, 1, True, True) 
 
-        >>pred = convlstm(x) 
+        >> pred, state = convlstm(x) 
     """ 
     def __init__(self, input_dim, hidden_dim, kernel_size, dec_kernel_size, num_layers,
                 batch_first=False, bias=True):
@@ -329,11 +349,14 @@ class ConvLSTM(nn.Module):
         input_tensor: 
             5-D tensor (t, b, c, h, w) or (b, t, c, h, w)
         hidden_state:
-            None
+            None or list of tuples(h, c)
         
         Returns:
         ----------
-        last_state_list, layer_out
+        Pred:
+            3-D tensor (b, h, w)
+        hidden_state:
+            None or list of tuples(h, c)
         """
         if not self.batch_first:
             # (t, b, c, h, w) -> (b, t, c, h, w)
@@ -343,12 +366,16 @@ class ConvLSTM(nn.Module):
 
         #Implement stateful ConvLSTM
         if hidden_state is not None:
-            raise NotImplementedError()
+            # raise NotImplementedError()
+            use_random_iter = False
         else:
+            use_random_iter = True
             hidden_state = self._init_hidden(batch_size=b, image_size=(h, w))
 
         seq_len = input_tensor.size(1)
         cur_layer_input = input_tensor
+
+        state_list = []
 
         for layer_idx in range(self.num_layers):
 
@@ -359,12 +386,18 @@ class ConvLSTM(nn.Module):
                                                     cur_state=[h, c])
                 output_inner.append(h)
             
+            if not use_random_iter:
+                state_list.append((h, c))
             layer_output = torch.stack(output_inner, dim=1)
             cur_layer_input = layer_output
 
         pred = self.relu(self.dec(torch.cat([input_tensor[:, -1, 0, :, :].unsqueeze(dim=1), layer_output[:, -1, :, :, :]], dim=1)))
 
-        return pred[:, 0, :, :]
+        if len(state_list) == 0:
+            return pred[:, 0, :, :], None
+        else:
+            return pred[:, 0, :, :], state_list
+
 
     def _init_hidden(self, batch_size, image_size):
         init_states = []
@@ -383,3 +416,12 @@ class ConvLSTM(nn.Module):
         if not isinstance(param, list):
             param = [param] * num_layers
         return param
+
+    def summary(self, PATH):
+        with open(PATH + "\\log.txt","a") as f:
+            f.write("\n-----------MODEL_INFO-----------\n")
+            f.write("model: \t\t\t\tConvLSTM\n")
+            f.write("hidden_dim: \t\t"+str(self.hidden_dim)+"\n")
+            f.write("kernel_size: \t\t"+str(self.kernel_size)+"\n")
+            f.write("dec_kernel_size: \t"+str(self.dec_kernel_size)+"\n")
+            f.write("num_layers: \t\t"+str(self.num_layers)+"\n")

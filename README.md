@@ -15,7 +15,7 @@ O_{t} = Sigmoid(Conv(X_t, W_{xo}) + Conv(H_{t-1}, W_{ho}) + b_o) \\
 G_{t} = Tanh(Conv(X_t, W_{xg}) + Conv(H_{t-1}, W_{hg}) + b_g) \\
 C_t = F_t \odot C_{t-1} + I_t \odot G_t \\
 H_t = O_t \odot Tanh(C_t) \\ 
-Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p})
+Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
 $$
 
 ##### ConvGRU:
@@ -25,7 +25,7 @@ R_{t} = Sigmoid(Conv(X_t, W_{xr}) + Conv(H_{t-1}, W_{hr})+b_r) \\
 Z_{t} = Sigmoid(Conv(X_t, W_{xz}) + Conv(H_{t-1}, W_{hz})+b_z) \\
 \tilde{H}_t = Tanh(Conv(X_t, W_{x \tilde{h}})+Conv(R_t \odot H_{t-1}, W_{r \tilde{h}}) + b_{\tilde{h}}) \\
 H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H} \\
-Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p})
+Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
 $$
 
 
@@ -36,3 +36,10 @@ $$
 
 实现了 ConvLSTM 和 ConvGRU 的基本框架，以及训练所需的代码。
 
+##### update 4/11:
+
+1. 实现了 `use_random_iter = False` 的训练方式
+2. 实现了运行自动保存日志的功能
+3. 实现了保存和加载功能
+4. 优化了随机采样功能的逻辑
+5. 完善了注释
