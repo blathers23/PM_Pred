@@ -28,6 +28,9 @@ class ConvGRUCell(nn.Module):
         self.padding = 'same'
         self.bias = bias
 
+        self.batchnorm1 = nn.BatchNorm2d(2*self.hidden_dim)
+        self.batchnorm2 = nn.BatchNorm2d(self.hidden_dim)
+
         self.conv1 = nn.Conv2d(in_channels=self.input_dim+self.hidden_dim,
                                 out_channels=2*self.hidden_dim,
                                 kernel_size=self.kernel_size,
@@ -43,15 +46,19 @@ class ConvGRUCell(nn.Module):
 
         h_cur = cur_state
 
-        combined1 = torch.cat([input_tensor, h_cur], dim=1)  #concat alone channel axis
+        combined1 = torch.cat([input_tensor, h_cur], dim=1)  # concat alone channel axis
 
-        combined_conv = self.conv1(combined1)
+        # combined_conv = self.conv1(combined1)
+        combined_conv = self.batchnorm1(self.conv1(combined1))
+        
         cc_r, cc_z = torch.split(combined_conv, self.hidden_dim, dim=1)
         r = torch.sigmoid(cc_r)
         z = torch.sigmoid(cc_z)
 
         combined2 = torch.cat([input_tensor, r * h_cur], dim=1)
-        h_next_ = self.conv2(combined2)
+        
+        # h_next_ = self.conv2(combined2)
+        h_next_ = self.batchnorm2(self.conv2(combined2))
 
         h_next = z * h_cur + (torch.ones_like(z) - z) * h_next_
 
@@ -154,7 +161,7 @@ class ConvGRU(nn.Module):
 
         b, _, _, h, w = input_tensor.size()
 
-        #Implement stateful ConvGRU
+        # Implement stateful ConvGRU
         if hidden_state is not None:
             use_random_iter = False
         else:
@@ -193,7 +200,7 @@ class ConvGRU(nn.Module):
             init_states.append(self.cell_list[i].init_hidden(batch_size, image_size))
         return init_states
 
-    @staticmethod   #静态方法无需实例化
+    @staticmethod   # 静态方法无需实例化
     def _check_kernel_size_consistency(kernel_size):
         if not (isinstance(kernel_size, tuple) or isinstance(kernel_size, int) or (isinstance(kernel_size, list)
             and all([isinstance(elem, tuple) for elem in kernel_size]))):
@@ -206,13 +213,13 @@ class ConvGRU(nn.Module):
         return param
 
     def summary(self, PATH):
-        with open(PATH + "\\log.txt","a") as f:
+        with open(PATH + "\\log.txt", "a") as f:
             f.write("\n--------MODEL_INFO--------\n")
-            f.write("model: \t\t\t\tConvGRU\n")
-            f.write("hidden_dim: \t\t"+str(self.hidden_dim)+"\n")
-            f.write("kernel_size: \t\t"+str(self.kernel_size)+"\n")
-            f.write("dec_kernel_size: \t"+str(self.dec_kernel_size)+"\n")
-            f.write("num_layers: \t\t"+str(self.num_layers)+"\n")
+            f.write("model:\tConvGRU\n")
+            f.write("hidden_dim:\t" + str(self.hidden_dim) + "\n")
+            f.write("kernel_size:\t" + str(self.kernel_size) + "\n")
+            f.write("dec_kernel_size:\t" + str(self.dec_kernel_size) + "\n")
+            f.write("num_layers:\t" + str(self.num_layers) + "\n")
 
 # ----------------------------------------------------------- #
 # ConvLSTM
@@ -242,6 +249,8 @@ class ConvLSTMCell(nn.Module):
         self.padding = 'same'
         self.bias = bias
 
+        self.batchnorm = nn.BatchNorm2d(4*self.hidden_dim)
+
         self.conv = nn.Conv2d(in_channels=self.input_dim+self.hidden_dim,
                                 out_channels=4*self.hidden_dim,
                                 kernel_size=self.kernel_size,
@@ -251,9 +260,11 @@ class ConvLSTMCell(nn.Module):
     def forward(self, input_tensor, cur_state):
         h_cur, c_cur = cur_state
 
-        combined = torch.cat([input_tensor, h_cur], dim=1)  #concat alone channel axis
+        combined = torch.cat([input_tensor, h_cur], dim=1)  # concat alone channel axis
         
-        combined_conv = self.conv(combined)
+        # combined_conv = self.conv(combined)
+        combined_conv = self.batchnorm(self.conv(combined))
+        
         cc_i, cc_f, cc_o, cc_c = torch.split(combined_conv, self.hidden_dim, dim=1)
         i = torch.sigmoid(cc_i)
         f = torch.sigmoid(cc_f)
@@ -364,7 +375,7 @@ class ConvLSTM(nn.Module):
 
         b, _, _, h, w = input_tensor.size()
 
-        #Implement stateful ConvLSTM
+        # Implement stateful ConvLSTM
         if hidden_state is not None:
             # raise NotImplementedError()
             use_random_iter = False
@@ -405,7 +416,7 @@ class ConvLSTM(nn.Module):
             init_states.append(self.cell_list[i].init_hidden(batch_size, image_size))
         return init_states
 
-    @staticmethod   #静态方法无需实例化
+    @staticmethod   # 静态方法无需实例化
     def _check_kernel_size_consistency(kernel_size):
         if not (isinstance(kernel_size, tuple) or isinstance(kernel_size, int) or (isinstance(kernel_size, list)
             and all([isinstance(elem, tuple) for elem in kernel_size]))):
@@ -420,8 +431,8 @@ class ConvLSTM(nn.Module):
     def summary(self, PATH):
         with open(PATH + "\\log.txt","a") as f:
             f.write("\n-----------MODEL_INFO-----------\n")
-            f.write("model: \t\t\t\tConvLSTM\n")
-            f.write("hidden_dim: \t\t"+str(self.hidden_dim)+"\n")
-            f.write("kernel_size: \t\t"+str(self.kernel_size)+"\n")
-            f.write("dec_kernel_size: \t"+str(self.dec_kernel_size)+"\n")
-            f.write("num_layers: \t\t"+str(self.num_layers)+"\n")
+            f.write("model:\tConvLSTM\n")
+            f.write("hidden_dim:\t" + str(self.hidden_dim) + "\n")
+            f.write("kernel_size:\t" + str(self.kernel_size) + "\n")
+            f.write("dec_kernel_size:\t" + str(self.dec_kernel_size) + "\n")
+            f.write("num_layers:\t" + str(self.num_layers) + "\n")

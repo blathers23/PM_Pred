@@ -1,3 +1,5 @@
 __pycache__/
 Models/
 114514.ipynb
+Data/test_dataset.npy
+Data/train_dataset.npy

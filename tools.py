@@ -7,7 +7,6 @@ import random
 import numpy as np 
 from IPython import display
 from matplotlib import pyplot as plt
-from d2l import torch as d2l
 
 def try_gpu(i=0):
     """返回可用的cuda设备，如果没有则返回cpu"""
@@ -111,22 +110,25 @@ class Animator:
         display.display(self.fig)
         display.clear_output(wait=True)
 
-def seq_data_iter_random(pictures, batch_size, num_steps):
+def seq_data_iter_random(pictures, batch_size, num_steps, exceptlist=None):
     """使用随机抽样生成一个小批量子序列"""
-    # 从随机偏移量开始对序列进行分区，随即范围包括num_stpes-1
+    # 从随机偏移量开始对序列进行分区，随即范围包括 num_stpes - 1
     pictures = pictures[random.randint(0, num_steps - 1):]
     # 由于要考虑标签，序列长度减一
     num_subseqs = (len(pictures) - 1) // num_steps
-    # 长度为num_steps的子序列的起始索引
+    # 长度为 num_steps 的子序列的起始索引
     initial_indices = list(range(0, num_subseqs * num_steps, num_steps))
+    # 去除存在时序间断数据的索引
+    if exceptlist is not None:
+        raise NotImplementedError()
     # 在迭代抽样的过程中，
     # 来自两个相邻的、随机的、小批量的子序列不一定在原始序列上相邻
     random.shuffle(initial_indices)
 
     def data(pos):
-        # 返回从pos位置开始的长度为num_steps的序列
+        # 返回从 pos 位置开始的长度为 num_steps 的序列
         return pictures[pos: pos + num_steps]
-    
+
     num_batches = num_subseqs // batch_size
     for i in range(0, batch_size * num_batches, batch_size):
         # initial_indices 包含子序列的随机起始索引
@@ -135,16 +137,26 @@ def seq_data_iter_random(pictures, batch_size, num_steps):
         Y = [pictures[j + num_steps][0, :, :] for j in initial_indices_per_batch]
         yield torch.tensor(np.array(X), dtype=torch.float), torch.tensor(np.array(Y), dtype=torch.float)
 
-def seq_data_iter_random_repeated(pictures, batch_size, num_steps):
+def seq_data_iter_random_repeated(pictures, batch_size, num_steps, exceptlist=None):
     """使用随机抽样生成一个小批量子序列，存在数据的重复使用"""
     # 子序列的起点为所有点
     num_subseqs = len(pictures) - num_steps
     initial_indices = list(range(0, num_subseqs))
+
+    if exceptlist is not None:
+        for num in exceptlist:
+            if num > num_subseqs:
+                raise ValueError()
+            for _ in range(num_steps):
+                del initial_indices[num - num_steps]
+
+        num_subseqs -= num_steps
+
     random.shuffle(initial_indices)
 
     def data(pos):
         return pictures[pos: pos + num_steps]
-    
+
     num_batches = num_subseqs // batch_size
     for i in range(0, batch_size * num_batches, batch_size):
         initial_indices_per_batch = initial_indices[i: i + batch_size]
@@ -152,10 +164,14 @@ def seq_data_iter_random_repeated(pictures, batch_size, num_steps):
         Y = [pictures[j + num_steps][0, :, :] for j in initial_indices_per_batch]
         yield torch.tensor(np.array(X), dtype=torch.float), torch.tensor(np.array(Y), dtype=torch.float)
 
-def seq_data_iter_sequential(pictures, batch_size, num_steps):
+def seq_data_iter_sequential(pictures, batch_size, num_steps, expceptlist=None):
     _, c, h, w = pictures.shape
     """使用顺序分区生成一个小批量子序列"""
     # 从随机偏移量开始划分序列
+
+    if expceptlist is not None:
+        raise AssertionError('Sequential data iter could not use excpetlist.')
+
     offset = random.randint(0, num_steps)
     num_pictures = ((len(pictures) - offset - 1) // batch_size) * batch_size
     Xs = torch.tensor(np.array(pictures[offset: offset + num_pictures]), dtype=torch.float)
@@ -168,10 +184,16 @@ def seq_data_iter_sequential(pictures, batch_size, num_steps):
 
 class SeqDataLoader:
     """An iterator to load sequence data"""
-    def __init__(self, pictures, batch_size, num_steps, use_random_iter, path):
+    def __init__(self, pictures, batch_size, num_steps, use_random_iter, path=None, exceptlist=None):
+        # 若 path 存在，则将 Data Loader 的信息保存到 path
+        # 若 exceptlist 存在，则认为该列表内元素处存在数据时间断裂，则去除时间断裂的数据。
         self.pictures = pictures
         self.batch_size = batch_size
         self.num_steps = num_steps
+        self.exceptlist = exceptlist
+
+        if self.exceptlist is not None and not use_random_iter:
+            raise AssertionError('Sequential data iter could not use excpetlist.')
 
         if use_random_iter:
             self.data_iter = seq_data_iter_random_repeated
@@ -179,14 +201,15 @@ class SeqDataLoader:
             self.data_iter = seq_data_iter_sequential
         
         if path is not None:
-            with open(path + "\\log.txt","a") as f:
+            with open(path + "\\log.txt", "a") as f:
                 f.write("\n--------TRAIN_DATALOADER--------\n")
-                f.write("batch_size: \t\t"+str(self.batch_size)+"\n")
-                f.write("num_steps: \t\t\t"+str(self.num_steps)+"\n")
-                f.write("use_random_iter: \t"+str(use_random_iter)+"\n")
+                f.write("num_pictures:\t" + str(self.pictures.shape[0]) + "\n")
+                f.write("batch_size:\t" + str(self.batch_size) + "\n")
+                f.write("num_steps:\t" + str(self.num_steps) + "\n")
+                f.write("use_random_iter:\t" + str(use_random_iter) + "\n")
 
     def __iter__(self):
-        return self.data_iter(self.pictures, self.batch_size, self.num_steps)
+        return self.data_iter(self.pictures, self.batch_size, self.num_steps, self.exceptlist)
 
 def predict(net, data, device):
     raise NotImplementedError()
@@ -194,7 +217,7 @@ def predict(net, data, device):
     return net(data)
 
 def grad_clipping(net, theta):
-    """Clip the gradient"""
+    """Clip the gradient""" # 有 Bug
     params = [p for p in net.parameters() if p.requires_grad]
     norm = torch.sqrt(sum(torch.sum((p.grad**2))for p in params))
     if norm > theta:
@@ -203,6 +226,7 @@ def grad_clipping(net, theta):
 
 def train_epoch(net, train_iter, loss, updater, device, use_random_iter):
     """Train a net within one epoch"""
+    net.train()
     state, timer = None, Timer()
     metric = Accumulator(2)
     for X, Y in train_iter:
@@ -223,32 +247,56 @@ def train_epoch(net, train_iter, loss, updater, device, use_random_iter):
         l = loss(y_hat, y)
         updater.zero_grad()
         l.backward()
-        grad_clipping(net, 1)
+        # grad_clipping(net, 1)
         updater.step()
         metric.add(l * X.shape[0] * X.shape[1], X.shape[0] * X.shape[1])
     return metric[0] / metric[1], metric[1] / timer.stop()
 
-def train(net, train_iter, lr, num_epochs, device, use_random_iter, path):
+def train(net, train_iter, lr, num_epochs, device, use_random_iter, weigth_decay=0, path=None, eval=None):
     """Train a model"""
-    net.train()
     loss = nn.MSELoss()
-    animator = Animator(xlabel='epoch', ylabel='MSE', legend=['train'], xlim=[10, num_epochs])
 
-    updater = torch.optim.SGD(net.parameters(), lr)
+    if eval is None:
+        animator = Animator(xlabel='epoch', ylabel='MSE', legend=['train'], xlim=[5, num_epochs])
+    else:
+        Min_MSE = 40
+        animator = Animator(xlabel='epoch', ylabel='MSE', legend=['train', 'eval'], xlim=[5, num_epochs])
+
+    updater = torch.optim.Adam(net.parameters(), lr, weight_decay=weigth_decay)
 
     for epoch in range(num_epochs):
         MSE, speed = train_epoch(net, train_iter, loss, updater, device, use_random_iter)
-        if (epoch + 1) % 10 == 0:
-            animator.add(epoch + 1, [MSE])
+
+        if eval is None:
+            if (epoch + 1) % 5 == 0:
+                animator.add(epoch + 1, [MSE])
+        
+        else:
+            if (epoch + 1) % 5 == 0:
+                animator.add(epoch + 1, [MSE, None])
+
+            if (epoch + 1) % 10 == 0:
+                eval_MSE = evaluate(net, eval, device)
+
+                animator.add(epoch + 1, [None, eval_MSE])
+
+                if eval_MSE < Min_MSE and path is not None:
+                    Min_MSE = eval_MSE
+                    save(net, path, epoch + 1, eval_MSE)
+
+                    net = net.to(device)
+
     print(f'MSE: {MSE:.6f}; {speed:.1f} pictures/sec on {str(device)}')
 
-    with open(path + "\\log.txt","a") as f:
-        f.write("\n-----------TRAIN_INFO-----------\n")
-        f.write("learning_rate: \t\t"+str(lr)+"\n")
-        f.write("num_epochs: \t\t"+str(num_epochs)+"\n")
-        f.write("MSE: \t\t\t\t"+str(MSE)+"\n")
-        f.write("speed: \t\t\t\t"+str(speed)+" pictures/sec \n")
-        f.write("device: \t\t\t"+str(device)+"\n")
+    if path is not None:
+        with open(path + "\\log.txt", "a") as f:
+            f.write("\n-----------TRAIN_INFO-----------\n")
+            f.write("learning_rate:\t" + str(lr) + "\n")
+            f.write("num_epochs:\t" + str(num_epochs) + "\n")
+            f.write("weigth_decay:\t" + str(weigth_decay) + "\n")
+            f.write("MSE:\t" + str(MSE) + "\n")
+            f.write("speed:\t" + str(speed) + " pictures/sec\n")
+            f.write("device:\t" + str(device) + "\n")
 
 def evaluate(net, data_iter, device):
     net.eval()
@@ -262,13 +310,22 @@ def evaluate(net, data_iter, device):
             y_hat, _ = net(X)
             l = loss(y, y_hat)
             metric.add(l * X.shape[0] * X.shape[1], X.shape[0] * X.shape[1])
+
     return metric[0] / metric[1]
 
-def save(net, PATH):
+def save(net, path, epoch=None, eval_MSE=None):
     net = net.to('cpu')
-    PATH += '\\Model.pt'
-    torch.save(net.state_dict(), PATH)
-    print('save successfully.')
+    torch.save(net.state_dict(), path + "/Model.pt")
+    
+    if epoch is None:
+        print('save successfully.')
+    else:
+        with open(path + "/log.txt", "a") as f:
+            f.write("\n-----------SAVE_INFO-----------\n")
+            f.write('save successfully at epoch:\t' + str(epoch) + "\n")
+            
+            if eval_MSE is not None:
+                f.write('eval_MSE:\t' + str(eval_MSE) + "\n")
 
 def load(net, PATH, device):
     net.load_state_dict(torch.load(PATH, map_location=device))
