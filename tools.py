@@ -328,10 +328,10 @@ def save(net, path, epoch=None, eval_MSE=None):
                 f.write('eval_MSE:\t' + str(eval_MSE) + "\n")
 
 def load(net, PATH, device):
-    net.load_state_dict(torch.load(PATH, map_location=device))
+    net.load_state_dict(torch.load(PATH + "/Model.pt", map_location=device))
     print('load successfully.')
 
 def Get_PATH():
-    PATH = 'Models\\' + str(time.strftime('%Y-%m-%d_%H-%M-%S',time.localtime(time.time())))
+    PATH = 'Models/' + str(time.strftime('%Y-%m-%d_%H-%M-%S',time.localtime(time.time())))
     os.mkdir(PATH)
     return PATH
