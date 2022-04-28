@@ -14,8 +14,8 @@ $$
 I_{t} = Sigmoid(Conv(X_t, W_{xi}) + Conv(H_{t-1}, W_{hi}) + b_i) \\
 F_{t} = Sigmoid(Conv(X_t, W_{xf}) + Conv(H_{t-1}, W_{hf}) + b_f) \\
 O_{t} = Sigmoid(Conv(X_t, W_{xo}) + Conv(H_{t-1}, W_{ho}) + b_o) \\
-\tilde{C}_{t} = Tanh(Conv(X_t, W_{xc}) + Conv(H_{t-1}, W_{hc}) + b_h) \\
-C_t = F_t \odot C_{t-1} + I_t \odot \tilde{C}_t \\
+\tilde{C_t} = Tanh(Conv(X_t, W_{xc}) + Conv(H_{t-1}, W_{hc}) + b_h) \\
+C_t = F_t \odot C_{t-1} + I_t \odot \tilde{C_t} \\
 H_t = O_t \odot Tanh(C_t) \\ 
 Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
 $$
@@ -25,8 +25,8 @@ $$
 $$
 R_{t} = Sigmoid(Conv(X_t, W_{xr}) + Conv(H_{t-1}, W_{hr})+b_r) \\
 Z_{t} = Sigmoid(Conv(X_t, W_{xz}) + Conv(H_{t-1}, W_{hz})+b_z) \\
-\tilde{H}_t = Tanh(Conv(X_t, W_{xh})+Conv(R_t \odot H_{t-1}, W_{rh}) + b_{h}) \\
-H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H} \\
+\tilde{H_t} = Tanh(Conv(X_t, W_{xh})+Conv(R_t \odot H_{t-1}, W_{rh}) + b_{h}) \\
+H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H_t} \\
 Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
 $$
 
