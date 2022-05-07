@@ -153,6 +153,7 @@ def seq_data_iter_random_repeated(pictures, batch_size, num_steps, exceptlist=No
         num_subseqs -= num_steps
 
     random.shuffle(initial_indices)
+    # print(initial_indices)
 
     def data(pos):
         return pictures[pos: pos + num_steps]
