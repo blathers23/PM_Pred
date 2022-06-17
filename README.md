@@ -8,26 +8,56 @@
 
 ##### ConvLSTM：
 
-> 与 ConvLSTM 论文中的实现方式不同，以《动手学深度学习》中的描述为准
+> 与 ConvLSTM 论文中的实现方式不同。
 
 $$
-I_{t} = Sigmoid(Conv(X_t, W_{xi}) + Conv(H_{t-1}, W_{hi}) + b_i) \\
-F_{t} = Sigmoid(Conv(X_t, W_{xf}) + Conv(H_{t-1}, W_{hf}) + b_f) \\
-O_{t} = Sigmoid(Conv(X_t, W_{xo}) + Conv(H_{t-1}, W_{ho}) + b_o) \\
-\tilde{C_t} = Tanh(Conv(X_t, W_{xc}) + Conv(H_{t-1}, W_{hc}) + b_h) \\
-C_t = F_t \odot C_{t-1} + I_t \odot \tilde{C_t} \\
-H_t = O_t \odot Tanh(C_t) \\ 
-Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
+I_{t} = Sigmoid(Conv(X_t, W_{xi}) + Conv(H_{t-1}, W_{hi}) + b_i)
+$$
+
+$$
+F_{t} = Sigmoid(Conv(X_t, W_{xf}) + Conv(H_{t-1}, W_{hf}) + b_f)
+$$
+
+$$
+O_{t} = Sigmoid(Conv(X_t, W_{xo}) + Conv(H_{t-1}, W_{ho}) + b_o)
+$$
+
+$$
+\tilde{C_t} = Tanh(Conv(X_t, W_{xc}) + Conv(H_{t-1}, W_{hc}) + b_h)
+$$
+
+$$
+C_t = F_t \odot C_{t-1} + I_t \odot \tilde{C_t}
+$$
+
+$$
+H_t = O_t \odot Tanh(C_t)
+$$
+
+$$
+Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p})
 $$
 
 ##### ConvGRU:
 
 $$
-R_{t} = Sigmoid(Conv(X_t, W_{xr}) + Conv(H_{t-1}, W_{hr})+b_r) \\
-Z_{t} = Sigmoid(Conv(X_t, W_{xz}) + Conv(H_{t-1}, W_{hz})+b_z) \\
-\tilde{H_t} = Tanh(Conv(X_t, W_{xh})+Conv(R_t \odot H_{t-1}, W_{rh}) + b_{h}) \\
-H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H_t} \\
-Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p}) \\
+R_{t} = Sigmoid(Conv(X_t, W_{xr}) + Conv(H_{t-1}, W_{hr})+b_r)
+$$
+
+$$
+Z_{t} = Sigmoid(Conv(X_t, W_{xz}) + Conv(H_{t-1}, W_{hz})+b_z)
+$$
+
+$$
+\tilde{H_t} = Tanh(Conv(X_t, W_{xh})+Conv(R_t \odot H_{t-1}, W_{rh}) + b_{h})
+$$
+
+$$
+H_t = Z_t \odot H_{t-1} + (1 - Z_t) \odot \tilde{H_t}
+$$
+
+$$
+Pred = ReLU(Conv(X_t, W_{xx}) + Conv(H_t, W_{xh}) + b_{p})
 $$
 
 #### 进度：
@@ -64,7 +94,7 @@ $$
 - [x] 学习 WRF
 - [x] 生成原始数据
 - [x] 训练模型
-- [ ] 撰写论文
+- [x] 撰写论文
 
 ##### 闲的没事：
 
@@ -77,6 +107,8 @@ $$
 \[ 1 \]: [NIPS 2015: Convolutional LSTM Network](https://proceedings.neurips.cc/paper/2015/file/07563a3fe3bbe7e3ba84431ad9d055af-Paper.pdf )
 
 \[ 2 \]: [动手学深度学习](https://zh.d2l.ai/)
+
+\[ 3 \]: [ConvLSTM实现参考](https://github.com/ndrplz/ConvLSTM_pytorch)
 
 
 
